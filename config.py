@@ -14,7 +14,7 @@ class ModelConfig:
     num_layers: int = 2
 
     # Rolling KV cache window size
-    max_chache_len: int = 16
+    max_cache_len: int = 16
 
     @property
     def head_dim(self) -> int:
