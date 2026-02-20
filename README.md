@@ -35,6 +35,30 @@ This project demonstrates core patterns used by production JAX inference pipelin
 - Restrict attention to a sliding window so compute and memory remain constant per step.
 - Implement the decode loop using `jax.lax.scan` so the loop can be JIT-compiled.
 
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+    in([Token t]) --> emb[Embedding]
+    emb --> layer[Transformer Stack]
+    
+    subgraph "Inference Step (JIT compiled)"
+        direction TB
+        layer --> |Logits| sample[Sample t+1]
+        
+        subgraph "Rolling KV Cache"
+            kv[("Circular Buffer<br/>(Fixed Size)")]
+            idx{Write Index}
+            kv -- "Sliding Window Attn" --> layer
+            layer -- "Update K,V" --> kv
+            idx -.-> |Rotates| idx
+        end
+    end
+    
+    sample --> |Next Token| in
+```
+
+
 ### Rolling KV Cache
 
 Instead of allowing the KV cache to grow indefinitely, we maintain a circular buffer:
