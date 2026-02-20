@@ -6,10 +6,15 @@ def init_layer_params(key, config: ModelConfig):
     Initialize parameters for one transformer block
     """
 
-    k1, k2, k3, k4, k5, k6 = jax.random.split(key, 0)
+    k1, k2, k3, k4, k5, k6 = jax.random.split(key, 6)
 
     embed_dim = config.embed_dim
     hidden_dim = 4 * config.embed_dim  # standard transformer MLP expansion
+
+    # Compute RoPE frequencies
+    head_dim = config.head_dim
+    half_dim = head_dim // 2
+    inv_freq = 1.0 / (10000 ** (jax.numpy.arange(0, half_dim) / half_dim))
 
     return {
         "Wq": jax.random.normal(k1, (embed_dim, embed_dim)) * 0.02,
@@ -18,6 +23,7 @@ def init_layer_params(key, config: ModelConfig):
         "Wo": jax.random.normal(k4, (embed_dim, embed_dim)) * 0.02,
         "W1": jax.random.normal(k5, (embed_dim, hidden_dim)) * 0.02,
         "W2": jax.random.normal(k6, (hidden_dim, embed_dim)) * 0.02,
+        "rope_inv_freq": inv_freq,
     }
 
 def init_params(key, config: ModelConfig):

@@ -1,42 +1,32 @@
 import jax.numpy as jnp
 from model.cache import KVCache
 
-def get_visible_positions(cache: KVCache):
-    """
-    Returns the absolute positions currently visible in the sliding window.
-
-    Output:
-        positions: (used,)
-    """
-     
-    total = cache.total_tokens
-    used = cache.used
-
-    start = total - used
-    return jnp.arange(start, total)
-
 def sliding_window_mask(cache: KVCache):
     """
-    Returns boolean mask for visible tokens
-    relative to current decoding step.
-
+    Returns boolean mask for valid tokens in the cache buffer.
+    Since get_visible_kv now returns the full physical buffer,
+    we simply mask out slots that haven't been used yet.
+    
+    Because the inference is autoregressive (sequential),
+    we don't need a causal mask (future masking) for the cache content 
+    itself, as the cache only contains past and current tokens.
+    
     Output:
-        mask shape: (used,)
+        mask shape: (max_len,)
     """
-
-    total = cache.total_tokens
-    used = cache.used
+    
+    # Static shape from the array
     max_len = cache.k.shape[1]
+    
+    # Create static indices 0..max_len-1
+    idxs = jnp.arange(max_len)
+    
+    # Valid slots are those < used
+    # This works for both filling phase (used < max_len)
+    # and wrapped phase (used = max_len)
+    mask = idxs < cache.used
+    
+    return mask
 
-    # Absolute positions in window
-    positions = get_visible_positions(cache)
-
-    current_position = total - 1
-
-    # Causal condition
-    causal = positions <= current_position
-
-    # Sliding window constraint
-    window = positions > current_position - max_len
-
-    return causal & window
+# Deprecated/Unused helper (removed to avoid confusion/errors)
+# def get_visible_positions(cache: KVCache): ...

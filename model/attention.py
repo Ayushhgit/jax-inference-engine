@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 
-from model.cache import _update_cache, get_visible_kv
+from model.cache import update_cache_layer, get_visible_kv
 from utils.masks import sliding_window_mask
 from config import ModelConfig
 
@@ -16,6 +16,7 @@ def attention_layer(layer_params, hidden, layer_index, cache, config: ModelConfi
     Wk = layer_params["Wk"]
     Wv = layer_params["Wv"]
     Wo = layer_params["Wo"]
+    inv_freq = layer_params["rope_inv_freq"]
 
     # Linear projections
     q = hidden @ Wq
@@ -27,18 +28,18 @@ def attention_layer(layer_params, hidden, layer_index, cache, config: ModelConfi
     k = k.reshape(config.num_heads, config.head_dim)
     v = v.reshape(config.num_heads, config.head_dim)
 
+    # Apply RoPE
+    # We need the current absolute position for RoPE
+    # The cache.total_tokens tracks the number of tokens processed so far
+    # The current token being processed is at position `total_tokens`
+    position = cache.total_tokens
+    
+    from model.rope import apply_rope
+    q = apply_rope(q, position, inv_freq)
+    k = apply_rope(k, position, inv_freq)
 
-    # Build full-layer tensors for update
-    # We create zero tensors for all layers,
-    # then fill only this layer's slot.
-
-    new_k = jnp.zeros_like(cache.k[:, 0])
-    new_v = jnp.zeros_like(cache.v[:, 0])
-
-    new_k = new_k.at[layer_index].set(k)
-    new_v = new_v.at[layer_index].set(v)
-
-    cache = _update_cache(cache, new_k, new_v)
+    # Update this layer's cache
+    cache = update_cache_layer(cache, layer_index, k, v)
 
     # Retrieve visible KV
     k_all, v_all = get_visible_kv(cache)

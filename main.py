@@ -1,16 +1,23 @@
-from config import ModelConfig
-from model.cache import _init_cache, _update_cache
+import jax
 import jax.numpy as jnp
 
+from config import ModelConfig
+from model.params import init_params
+from model.cache import _init_cache
+from inference._generate import generate
+
 cfg = ModelConfig()
+params = init_params(jax.random.PRNGKey(0), cfg)
 cache = _init_cache(cfg)
 
-dummy_k = jnp.ones((cfg.num_layers, cfg.num_heads, cfg.head_dim))
-dummy_v = jnp.ones((cfg.num_layers, cfg.num_heads, cfg.head_dim))
+start_token = jnp.array(0)
 
-for i in range(20):
-    cache = _update_cache(cache, dummy_k * i, dummy_v * i)
+tokens, cache = generate(
+    params,
+    start_token,
+    cache,
+    cfg,
+    steps=20,
+)
 
-print("Used:", cache.used)
-print("Write index:", cache.write_index)
-print("Total tokens:", cache.total_tokens)
+print("Generated:", tokens)

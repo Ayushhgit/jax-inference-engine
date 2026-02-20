@@ -37,4 +37,8 @@ def transformer_step(params, token_id, cache, config: ModelConfig ):
 
     logits = hidden @ lm_head  # (vocab_size,)
 
+    # Advance cache pointer for the next token
+    from model.cache import advance_cache_pointer
+    cache = advance_cache_pointer(cache)
+
     return logits, cache
