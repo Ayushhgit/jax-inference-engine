@@ -1,5 +1,7 @@
 import jax
+import jax.numpy as jnp
 from config import ModelConfig
+from model.rope import compute_inv_frequencies
 
 def init_layer_params(key, config: ModelConfig):
     """
@@ -11,11 +13,6 @@ def init_layer_params(key, config: ModelConfig):
     embed_dim = config.embed_dim
     hidden_dim = 4 * config.embed_dim  # standard transformer MLP expansion
 
-    # Compute RoPE frequencies
-    head_dim = config.head_dim
-    half_dim = head_dim // 2
-    inv_freq = 1.0 / (10000 ** (jax.numpy.arange(0, half_dim) / half_dim))
-
     return {
         "Wq": jax.random.normal(k1, (embed_dim, embed_dim)) * 0.02,
         "Wk": jax.random.normal(k2, (embed_dim, embed_dim)) * 0.02,
@@ -23,7 +20,12 @@ def init_layer_params(key, config: ModelConfig):
         "Wo": jax.random.normal(k4, (embed_dim, embed_dim)) * 0.02,
         "W1": jax.random.normal(k5, (embed_dim, hidden_dim)) * 0.02,
         "W2": jax.random.normal(k6, (hidden_dim, embed_dim)) * 0.02,
-        "rope_inv_freq": inv_freq,
+        "rope_inv_freq": compute_inv_frequencies(config),
+        # LayerNorm parameters (initialized to standard values)
+        "ln1_gamma": jnp.ones(embed_dim),
+        "ln1_beta": jnp.zeros(embed_dim),
+        "ln2_gamma": jnp.ones(embed_dim),
+        "ln2_beta": jnp.zeros(embed_dim),
     }
 
 def init_params(key, config: ModelConfig):

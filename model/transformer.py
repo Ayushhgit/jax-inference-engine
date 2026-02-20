@@ -1,10 +1,11 @@
 import jax.numpy as jnp
 
 from model.transformer_block import transformer_block
+from model.cache import advance_cache_pointer
 from config import ModelConfig
 
 # Single Decode Step
-def transformer_step(params, token_id, cache, config: ModelConfig ):
+def transformer_step(params, token_id, cache, config: ModelConfig):
     """
     Performs one autoregressive decoding step.
     Inputs:
@@ -19,7 +20,7 @@ def transformer_step(params, token_id, cache, config: ModelConfig ):
     embedding_matrix = params["embedding"]
     hidden = embedding_matrix[token_id]  # (embed_dim,)
 
-    # Pass thorugh Transformer layer
+    # Pass through Transformer layers
     for layer_index in range(config.num_layers):
 
         layer_params = params["layers"][layer_index]
@@ -38,7 +39,6 @@ def transformer_step(params, token_id, cache, config: ModelConfig ):
     logits = hidden @ lm_head  # (vocab_size,)
 
     # Advance cache pointer for the next token
-    from model.cache import advance_cache_pointer
     cache = advance_cache_pointer(cache)
 
     return logits, cache
